@@ -27,13 +27,7 @@
   </div>
 
 <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const pid = urlParams.get('pid') || 'unknown';
-
-    const redirectURL = 'https://www.butler.edu/?pid=' + encodeURIComponent(pid);
-
-    console.log('Participant ID:', pid);
-    console.log('Redirect URL:', redirectURL);
+    const redirectURL = 'https://www.butler.edu/';
 
     let mediaRecorder;
     let recordedChunks = [];
@@ -54,7 +48,7 @@
           const a = document.createElement('a');
           a.style.display = 'none';
           a.href = url;
-          a.download = `recording_${pid}.webm`;
+          a.download = 'recording.webm';
           document.body.appendChild(a);
           a.click();
           setTimeout(() => {
