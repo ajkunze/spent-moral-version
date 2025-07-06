@@ -3,102 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <title>Study Screen Recording</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+    h1 { text-align: center; }
+    ol { margin-top: 1em; }
+    button { font-size: 1.1em; margin: 10px 5px; padding: 10px 20px; }
+    a { color: blue; text-decoration: underline; }
+  </style>
 </head>
 <body>
-  <h1>Welcome to the Study</h1>
-  <p>Instructions: Click "Start Recording" and select the <strong>Spent</strong> tab or screen to share. You can stop by clicking "Stop Recording" OR stop screen sharing in your browser.</p>
-  
-  <button id="startBtn">Start Recording</button>
-  <button id="stopBtn" disabled>Stop Recording</button>
-  
-  <p><a href="https://playspent.org/" target="_blank" id="gameLink">Open Spent in new tab</a></p>
+  <h1>Study Instructions</h1>
+  <ol>
+    <li><strong>Read all instructions carefully.</strong> Understand the task before you begin.</li>
+    <li>Open the <a href="https://playspent.org/" target="_blank" rel="noopener noreferrer" id="gameLink">Spent Game</a> in a new tab.</li>
+    <li>Click <strong>Start Recording</strong> below and select the <em>Spent</em> game tab or your full screen to share.</li>
+    <li>Play the game according to the instructions on the game page.</li>
+    <li>When done, either click <strong>Stop Recording</strong> button here, or manually stop screen sharing from your browser toolbar. The recording will then download automatically and you will be redirected to the post-survey page.</li>
+  </ol>
+
+  <div style="text-align:center; margin-top: 20px;">
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop Recording</button>
+  </div>
 
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const pid = urlParams.get('pid') || 'unknown';
+    const redirectURL = 'https://www.butler.edu/'; // CHANGE this to your actual post-survey URL
 
     let mediaRecorder;
     let recordedChunks = [];
 
+    // Start recording handler
     document.getElementById('startBtn').onclick = async () => {
       try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        console.log("✅ Screen sharing stream acquired");
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
 
-        mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
-        recordedChunks = [];
-
-        // When data becomes available
-        mediaRecorder.ondataavailable = e => {
-          if (e.data.size > 0) {
-            console.log("📦 Data chunk received");
-            recordedChunks.push(e.data);
-          }
-        };
-
-        // When recording stops (either by button or browser stop)
-        mediaRecorder.onstop = () => {
-          console.log("🛑 MediaRecorder stopped");
-
-          const blob = new Blob(recordedChunks, { type: "video/webm" });
-
-          fetch('https://script.google.com/macros/s/AKfycbwpxNBVOBxrpysptqhIhgD4fMY1c8DX2B1FEViTkopXpk4oQn2dh_ww06V8wP8cgBWj2Q/exec', {
-            method: 'POST',
-            body: blob,
-            headers: {
-              'Content-Type': 'video/webm'
-            }
-          })
-          .then(response => response.json())
-          .then(data => {
-            console.log('☁️ Upload response:', data);
-            if(data.status === 'success'){
-              alert('✅ Upload successful!');
-              window.location.href = `https://www.butler.edu/?pid=${pid}`;
-            } else {
-              alert('❌ Upload failed: ' + data.message);
-            }
-          })
-          .catch(err => {
-            console.error('❌ Upload error:', err);
-            alert('Upload error: ' + err);
-          });
-        };
-
-        mediaRecorder.onerror = (event) => {
-          console.error('❌ MediaRecorder error:', event.error);
-        };
-
-        // Auto-stop if user clicks “Stop Sharing” in browser
-        stream.getVideoTracks()[0].addEventListener('ended', () => {
-          console.log("📴 Screen sharing manually stopped by participant");
-          if (mediaRecorder && mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-          }
-        });
-
-        // Start recording
-        mediaRecorder.start();
-        console.log("▶️ MediaRecorder started");
-        document.getElementById('startBtn').disabled = true;
-        document.getElementById('stopBtn').disabled = false;
-        alert('Recording started. Now switch to Spent tab or screen.');
-        
-      } catch (err) {
-        console.error('❌ Error accessing display media:', err);
-        alert('Error accessing display media: ' + err);
-      }
-    };
-
-    document.getElementById('stopBtn').onclick = () => {
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        console.log("⏹ Stop Recording button clicked");
-        mediaRecorder.stop();
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('stopBtn').disabled = true;
-      }
-    };
-  </script>
-</body>
-</html>
-
+        // Listen for user manually stopping the screen share
+        stream.getVideoTracks()
