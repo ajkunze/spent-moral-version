@@ -34,6 +34,29 @@
         document.getElementById('startBtn').disabled = true;
         document.getElementById('stopBtn').disabled = false;
         alert('Recording started. Now switch to Spent tab or screen.');
+        
+        mediaRecorder.addEventListener('stop', () => {
+          const blob = new Blob(recordedChunks, { type: "video/webm" });
+
+          fetch('https://script.google.com/macros/s/AKfycbwpxNBVOBxrpysptqhIhgD4fMY1c8DX2B1FEViTkopXpk4oQn2dh_ww06V8wP8cgBWj2Q/exec', {
+            method: 'POST',
+            body: blob,
+            headers: {
+              'Content-Type': 'video/webm'
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if(data.status === 'success'){
+              alert('Upload successful!');
+              window.location.href = `https://www.butler.edu/?pid=${pid}`;
+            } else {
+              alert('Upload failed: ' + data.message);
+            }
+          })
+          .catch(err => alert('Upload error: ' + err));
+        });
+
       } catch (err) {
         alert('Error accessing display media: ' + err);
       }
@@ -44,30 +67,6 @@
       document.getElementById('startBtn').disabled = false;
       document.getElementById('stopBtn').disabled = true;
     };
-
-    mediaRecorder?.addEventListener('stop', () => {
-      const blob = new Blob(recordedChunks, { type: "video/webm" });
-
-      // Upload to Google Apps Script Web App
-      fetch('https://script.google.com/macros/s/AKfycbwpxNBVOBxrpysptqhIhgD4fMY1c8DX2B1FEViTkopXpk4oQn2dh_ww06V8wP8cgBWj2Q/exec', {
-        method: 'POST',
-        body: blob,
-        headers: {
-          'Content-Type': 'video/webm'
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if(data.status === 'success'){
-          alert('Upload successful!');
-          // Redirect to Qualtrics post-survey here
-          window.location.href = `https://www.butler.edu/`;
-        } else {
-          alert('Upload failed: ' + data.message);
-        }
-      })
-      .catch(err => alert('Upload error: ' + err));
-    });
   </script>
 </body>
 </html>
