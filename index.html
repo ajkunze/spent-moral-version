@@ -23,15 +23,23 @@
     document.getElementById('startBtn').onclick = async () => {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        console.log("✅ Screen sharing stream acquired");
 
         mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
         recordedChunks = [];
 
+        // When data becomes available
         mediaRecorder.ondataavailable = e => {
-          if (e.data.size > 0) recordedChunks.push(e.data);
+          if (e.data.size > 0) {
+            console.log("📦 Data chunk received");
+            recordedChunks.push(e.data);
+          }
         };
 
+        // When recording stops (either by button or browser stop)
         mediaRecorder.onstop = () => {
+          console.log("🛑 MediaRecorder stopped");
+
           const blob = new Blob(recordedChunks, { type: "video/webm" });
 
           fetch('https://script.google.com/macros/s/AKfycbwpxNBVOBxrpysptqhIhgD4fMY1c8DX2B1FEViTkopXpk4oQn2dh_ww06V8wP8cgBWj2Q/exec', {
@@ -43,38 +51,48 @@
           })
           .then(response => response.json())
           .then(data => {
-            console.log('Upload response:', data);
+            console.log('☁️ Upload response:', data);
             if(data.status === 'success'){
-              alert('Upload successful!');
-              window.location.href = `https://www.butler.edu/`;
+              alert('✅ Upload successful!');
+              window.location.href = `https://www.butler.edu/?pid=${pid}`;
             } else {
-              alert('Upload failed: ' + data.message);
+              alert('❌ Upload failed: ' + data.message);
             }
           })
           .catch(err => {
-            console.error('Upload error:', err);
+            console.error('❌ Upload error:', err);
             alert('Upload error: ' + err);
           });
         };
 
-        // When the user stops screen sharing directly
+        mediaRecorder.onerror = (event) => {
+          console.error('❌ MediaRecorder error:', event.error);
+        };
+
+        // Auto-stop if user clicks “Stop Sharing” in browser
         stream.getVideoTracks()[0].addEventListener('ended', () => {
+          console.log("📴 Screen sharing manually stopped by participant");
           if (mediaRecorder && mediaRecorder.state === 'recording') {
             mediaRecorder.stop();
           }
         });
 
+        // Start recording
         mediaRecorder.start();
+        console.log("▶️ MediaRecorder started");
         document.getElementById('startBtn').disabled = true;
         document.getElementById('stopBtn').disabled = false;
         alert('Recording started. Now switch to Spent tab or screen.');
+        
       } catch (err) {
+        console.error('❌ Error accessing display media:', err);
         alert('Error accessing display media: ' + err);
       }
     };
 
     document.getElementById('stopBtn').onclick = () => {
       if (mediaRecorder && mediaRecorder.state === 'recording') {
+        console.log("⏹ Stop Recording button clicked");
         mediaRecorder.stop();
         document.getElementById('startBtn').disabled = false;
         document.getElementById('stopBtn').disabled = true;
