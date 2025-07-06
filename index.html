@@ -1,1 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Study Screen Recording</title>
+</head>
+<body>
+  <h1>Welcome to the Study</h1>
+  <p>Instructions: Click "Start Recording" and select the <strong>Spent</strong> tab or screen to share.</p>
+  
+  <button id="startBtn">Start Recording</button>
+  <button id="stopBtn" disabled>Stop Recording</button>
+  
+  <p><a href="https://playspent.org/" target="_blank" id="gameLink">Open Spent in new tab</a></p>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const pid = urlParams.get('pid') || 'unknown';
+
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    document.getElementById('startBtn').onclick = async () => {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+      recordedChunks = [];
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `recording_${pid}_${Date.now()}.webm`;
+        a.click();
+        
+        // Redirect to Qualtrics post-survey
+        window.location.href = `https://your.qualtrics.link?pid=${pid}`;
+      };
+
+      mediaRecorder.start();
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('stopBtn').disabled = false;
+      alert('Recording started. Now switch to Spent tab or screen.');
+    };
+
+    document.getElementById('stopBtn').onclick = () => {
+      mediaRecorder.stop();
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+    };
+  </script>
+</body>
+</html>
 
