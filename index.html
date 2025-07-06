@@ -6,7 +6,7 @@
 </head>
 <body>
   <h1>Welcome to the Study</h1>
-  <p>Instructions: Click "Start Recording" and select the <strong>Spent</strong> tab or screen to share.</p>
+  <p>Instructions: Click "Start Recording" and select the <strong>Spent</strong> tab or screen to share. You can stop by clicking "Stop Recording" OR stop screen sharing in your browser.</p>
   
   <button id="startBtn">Start Recording</button>
   <button id="stopBtn" disabled>Stop Recording</button>
@@ -23,6 +23,7 @@
     document.getElementById('startBtn').onclick = async () => {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+
         mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
         recordedChunks = [];
 
@@ -30,12 +31,7 @@
           if (e.data.size > 0) recordedChunks.push(e.data);
         };
 
-        mediaRecorder.start();
-        document.getElementById('startBtn').disabled = true;
-        document.getElementById('stopBtn').disabled = false;
-        alert('Recording started. Now switch to Spent tab or screen.');
-        
-        mediaRecorder.addEventListener('stop', () => {
+        mediaRecorder.onstop = () => {
           const blob = new Blob(recordedChunks, { type: "video/webm" });
 
           fetch('https://script.google.com/macros/s/AKfycbwpxNBVOBxrpysptqhIhgD4fMY1c8DX2B1FEViTkopXpk4oQn2dh_ww06V8wP8cgBWj2Q/exec', {
@@ -47,6 +43,7 @@
           })
           .then(response => response.json())
           .then(data => {
+            console.log('Upload response:', data);
             if(data.status === 'success'){
               alert('Upload successful!');
               window.location.href = `https://www.butler.edu/?pid=${pid}`;
@@ -54,18 +51,34 @@
               alert('Upload failed: ' + data.message);
             }
           })
-          .catch(err => alert('Upload error: ' + err));
+          .catch(err => {
+            console.error('Upload error:', err);
+            alert('Upload error: ' + err);
+          });
+        };
+
+        // When the user stops screen sharing directly
+        stream.getVideoTracks()[0].addEventListener('ended', () => {
+          if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+          }
         });
 
+        mediaRecorder.start();
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('stopBtn').disabled = false;
+        alert('Recording started. Now switch to Spent tab or screen.');
       } catch (err) {
         alert('Error accessing display media: ' + err);
       }
     };
 
     document.getElementById('stopBtn').onclick = () => {
-      mediaRecorder.stop();
-      document.getElementById('startBtn').disabled = false;
-      document.getElementById('stopBtn').disabled = true;
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+      }
     };
   </script>
 </body>
