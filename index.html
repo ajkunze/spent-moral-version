@@ -27,7 +27,12 @@
   </div>
 
   <script>
-    const redirectURL = 'https://butler.edu'; // Change this to your actual post-survey URL
+    // Get participant ID from URL params, default to 'unknown' if missing
+    const urlParams = new URLSearchParams(window.location.search);
+    const pid = urlParams.get('pid') || 'unknown';
+
+    // Set your redirect URL here
+    const redirectURL = 'https://butler.edu' + encodeURIComponent(pid);
 
     let mediaRecorder;
     let recordedChunks = [];
@@ -36,7 +41,7 @@
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
 
-        // Detect if user stops sharing screen manually
+        // Detect manual stop of screen sharing
         stream.getVideoTracks()[0].addEventListener('ended', () => {
           if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             stopRecordingAndRedirect();
@@ -47,9 +52,7 @@
         recordedChunks = [];
 
         mediaRecorder.ondataavailable = event => {
-          if (event.data.size > 0) {
-            recordedChunks.push(event.data);
-          }
+          if (event.data.size > 0) recordedChunks.push(event.data);
         };
 
         mediaRecorder.start();
@@ -77,17 +80,19 @@
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
 
-        // Trigger automatic download
+        // Use pid in the file name
+        const fileName = `spent_recording_${pid}_${Date.now()}.webm`;
+
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = `spent_recording_${Date.now()}.webm`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         a.remove();
 
-        // Redirect after a short delay
+        // Redirect after a short delay to ensure download starts
         setTimeout(() => {
           window.location.href = redirectURL;
         }, 1000);
