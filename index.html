@@ -26,78 +26,60 @@
     <button id="stopBtn" disabled>Stop Recording</button>
   </div>
 
-  <script>
-    // Get participant ID from URL params, default to 'unknown' if missing
+<script>
     const urlParams = new URLSearchParams(window.location.search);
     const pid = urlParams.get('pid') || 'unknown';
 
-    // Set your redirect URL here
-    const redirectURL = 'https://butler.edu' + encodeURIComponent(pid);
+    const redirectURL = 'https://www.butler.edu/?pid=' + encodeURIComponent(pid);
+
+    console.log('Participant ID:', pid);
+    console.log('Redirect URL:', redirectURL);
 
     let mediaRecorder;
     let recordedChunks = [];
 
     document.getElementById('startBtn').onclick = async () => {
       try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-
-        // Detect manual stop of screen sharing
-        stream.getVideoTracks()[0].addEventListener('ended', () => {
-          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            stopRecordingAndRedirect();
-          }
-        });
-
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
         recordedChunks = [];
 
-        mediaRecorder.ondataavailable = event => {
-          if (event.data.size > 0) recordedChunks.push(event.data);
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: "video/webm" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = `recording_${pid}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            window.location.href = redirectURL;
+          }, 1000);
         };
 
         mediaRecorder.start();
         document.getElementById('startBtn').disabled = true;
         document.getElementById('stopBtn').disabled = false;
-
-        alert('Recording started. Switch to the Spent game tab or screen to play.');
+        alert('Recording started. Now switch to Spent tab or screen.');
       } catch (err) {
-        alert('Error starting screen capture: ' + err);
+        alert('Error accessing display media: ' + err);
       }
     };
 
     document.getElementById('stopBtn').onclick = () => {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        stopRecordingAndRedirect();
+      if(mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
       }
-    };
-
-    function stopRecordingAndRedirect() {
-      mediaRecorder.stop();
       document.getElementById('startBtn').disabled = false;
       document.getElementById('stopBtn').disabled = true;
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-
-        // Use pid in the file name
-        const fileName = `spent_recording_${pid}_${Date.now()}.webm`;
-
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-
-        // Redirect after a short delay to ensure download starts
-        setTimeout(() => {
-          window.location.href = redirectURL;
-        }, 1000);
-      };
-    }
+    };
   </script>
 </body>
 </html>
