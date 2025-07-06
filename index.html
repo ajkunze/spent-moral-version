@@ -27,15 +27,73 @@
   </div>
 
   <script>
-    const redirectURL = 'https://www.butler.edu/'; // CHANGE this to your actual post-survey URL
+    const redirectURL = 'https://your-temp-post-survey-page.example.com'; // Change this to your actual post-survey URL
 
     let mediaRecorder;
     let recordedChunks = [];
 
-    // Start recording handler
     document.getElementById('startBtn').onclick = async () => {
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
 
-        // Listen for user manually stopping the screen share
-        stream.getVideoTracks()
+        // Detect if user stops sharing screen manually
+        stream.getVideoTracks()[0].addEventListener('ended', () => {
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            stopRecordingAndRedirect();
+          }
+        });
+
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = event => {
+          if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.start();
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('stopBtn').disabled = false;
+
+        alert('Recording started. Switch to the Spent game tab or screen to play.');
+      } catch (err) {
+        alert('Error starting screen capture: ' + err);
+      }
+    };
+
+    document.getElementById('stopBtn').onclick = () => {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        stopRecordingAndRedirect();
+      }
+    };
+
+    function stopRecordingAndRedirect() {
+      mediaRecorder.stop();
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+
+        // Trigger automatic download
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `spent_recording_${Date.now()}.webm`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+
+        // Redirect after a short delay
+        setTimeout(() => {
+          window.location.href = redirectURL;
+        }, 1000);
+      };
+    }
+  </script>
+</body>
+</html>
+
