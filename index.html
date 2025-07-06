@@ -21,30 +21,22 @@
     let recordedChunks = [];
 
     document.getElementById('startBtn').onclick = async () => {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
-      recordedChunks = [];
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+        recordedChunks = [];
 
-      mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) recordedChunks.push(e.data);
-      };
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: "video/webm" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `recording_${pid}_${Date.now()}.webm`;
-        a.click();
-        
-        // Redirect to Qualtrics post-survey
-        window.location.href = `https://your.qualtrics.link?pid=${pid}`;
-      };
-
-      mediaRecorder.start();
-      document.getElementById('startBtn').disabled = true;
-      document.getElementById('stopBtn').disabled = false;
-      alert('Recording started. Now switch to Spent tab or screen.');
+        mediaRecorder.start();
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('stopBtn').disabled = false;
+        alert('Recording started. Now switch to Spent tab or screen.');
+      } catch (err) {
+        alert('Error accessing display media: ' + err);
+      }
     };
 
     document.getElementById('stopBtn').onclick = () => {
@@ -52,6 +44,30 @@
       document.getElementById('startBtn').disabled = false;
       document.getElementById('stopBtn').disabled = true;
     };
+
+    mediaRecorder?.addEventListener('stop', () => {
+      const blob = new Blob(recordedChunks, { type: "video/webm" });
+
+      // Upload to Google Apps Script Web App
+      fetch('https://script.google.com/macros/s/AKfycbwpxNBVOBxrpysptqhIhgD4fMY1c8DX2B1FEViTkopXpk4oQn2dh_ww06V8wP8cgBWj2Q/exec', {
+        method: 'POST',
+        body: blob,
+        headers: {
+          'Content-Type': 'video/webm'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if(data.status === 'success'){
+          alert('Upload successful!');
+          // Redirect to Qualtrics post-survey here
+          window.location.href = `https://your.qualtrics.link?pid=${pid}`;
+        } else {
+          alert('Upload failed: ' + data.message);
+        }
+      })
+      .catch(err => alert('Upload error: ' + err));
+    });
   </script>
 </body>
 </html>
